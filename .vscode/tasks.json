@@ -1,0 +1,69 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "compile",
+			"type": "shell",
+			"command": "g++",
+			"args":[
+				"*.cpp",
+				"-c",
+				"-DSFML-STATIC",
+				"-I${workspaceFolder}/Dependencies/SFML/include"
+			]
+		},
+		{
+			"label": "link",
+			"type": "shell",
+			"command": "g++",
+			"args":[
+				"*.o",
+				"-oGame",
+				"-DSFML-STATIC",
+				"-L${workspaceFolder}/Dependencies/SFML/lib",
+				"-lsfml-network-s -lsfml-audio-s -lsfml-graphics-s -lsfml-window-s -lsfml-system-s",
+				"-lopengl32 -lfreetype -lgdi32 -lopenal32 -lflac -lvorbisenc -lvorbisfile -lvorbis -logg -lws2_32 -lwinmm"
+			],
+			"dependsOn":[
+				"compile"
+			]
+		},
+		{
+			"label": "run",
+			"type": "shell",
+			"command": "${workspaceFolder}/Game.exe",
+			"dependsOn":[
+				"link"
+			]
+		},
+		{
+			"label": "debuglink",
+			"type": "shell",
+			"command": "g++",
+			"args":[
+				"*.o",
+				"-oGame",
+				"-DSFML-STATIC",
+				"-L${workspaceFolder}/Dependencies/SFML/lib",
+				"-lsfml-network-s-d -lsfml-audio-s-d -lsfml-graphics-s-d -lsfml-window-s-d -lsfml-system-s-d",
+				"-lopengl32 -lfreetype -lgdi32 -lopenal32 -lflac -lvorbisenc -lvorbisfile -lvorbis -logg -lws2_32 -lwinmm"
+			],
+			"dependsOn":[
+				"compile"
+			]
+		},
+		{	
+			"label": "debug",
+			"type": "shell",
+			"command": "${workspaceFolder}/Game.exe",
+			"dependsOn":[
+				"debuglink"
+			]
+		},
+		{
+			"label":"echo",
+			"type": "shell",
+			"command":"echo ${workspaceRoot}"
+		}
+	]
+}
