@@ -16,7 +16,7 @@ int main()
                 window.close();
             Handler.Update(event);
         }
-        
+
         Handler.Update();
         
         window.clear(sf::Color::Black);

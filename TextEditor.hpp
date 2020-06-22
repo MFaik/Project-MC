@@ -23,7 +23,9 @@ private:
     int m_characterHeight,m_characterWidth,m_characterDecenderHeight;
     sf::Color m_textColor,m_textColorInverted;
 
-    int m_renderStartLine = 0,m_renderStartPos = 0;
+    int m_renderStartLine,m_renderedLines,m_renderedChars;
+    std::list<std::string>::iterator m_renderStartIterator;
+
     Cursor m_cursor,m_selectStart,m_selectEnd,m_selectLil,m_selectBig;
     bool m_selecting;
 

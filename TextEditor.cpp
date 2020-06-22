@@ -2,6 +2,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <cmath>
+#include <string>
 #include <iostream>
 
 TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize)
@@ -18,11 +20,13 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
 
     m_maxHistoryLimit = 50;
 
+
+
     PushHistory();
 
     m_characterWidth = 0;
     m_characterDecenderHeight = 0;
-    for(int i = 0;i < 128;i++)
+    for(int i = 32;i < 128;i++)
     {
         m_charGlyphs[i] = font.getGlyph((char)i,m_characterHeight,false);
         if(m_charGlyphs[i].bounds.width > m_characterWidth)
@@ -30,6 +34,11 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
         if(m_charGlyphs[i].bounds.top+m_charGlyphs[i].bounds.height > m_characterDecenderHeight)
             m_characterDecenderHeight = m_charGlyphs[i].bounds.top+m_charGlyphs[i].bounds.height;
     }
+
+    m_renderStartLine = 0;
+    m_renderedChars = bounds.width/m_characterWidth;
+    m_renderedLines = bounds.height/m_characterHeight;
+    m_renderStartIterator = m_Text.begin();
 
     m_fontSprite.setColor(textColor);
     m_fontTexture = font.getTexture(m_characterHeight);
@@ -101,6 +110,7 @@ void TextEditor::Update(const sf::Event &event)//not done
             delete m_History.back();
             m_History.pop_back();
             m_historyReadOnly = false;
+            m_lastCharType = -1;
         }
         else if(event.text.unicode == 24)//ctrl-x
         {
@@ -209,59 +219,82 @@ void TextEditor::Render(sf::RenderWindow &window)//not done
     {
         if(m_selectLil.y == m_selectBig.y)
         {
-            m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight);
+            m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,
+                                       m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
             m_selectbgRect.setSize(sf::Vector2f((m_selectBig.x-m_selectLil.x)*m_characterWidth,m_characterHeight));
             window.draw(m_selectbgRect);
         }
         else
         {
-            m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight);
-            m_selectbgRect.setSize(sf::Vector2f((m_selectLil.lineIt->size()-m_selectLil.x)*m_characterWidth + 10,m_characterHeight));
-            window.draw(m_selectbgRect);
+            if(m_selectLil.y >= m_renderStartLine && m_selectLil.y < m_renderStartLine+m_renderedLines)
+            {
+                m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,
+                                           m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
+                m_selectbgRect.setSize(sf::Vector2f((m_selectLil.lineIt->size()-m_selectLil.x)*m_characterWidth + 10,m_characterHeight));
+                window.draw(m_selectbgRect);
+            }
             auto it = m_selectLil.lineIt;
             it++;
             for(int y = m_selectLil.y+1;y < m_selectBig.y;y++)
             {
-                m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+y*m_characterHeight + m_characterDecenderHeight);
-                m_selectbgRect.setSize(sf::Vector2f(it->size()*m_characterWidth + 10,m_characterHeight));
-                window.draw(m_selectbgRect);
+                if(y >= m_renderStartLine && y < m_renderStartLine+m_renderedLines)
+                {
+                    m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
+                    m_selectbgRect.setSize(sf::Vector2f(it->size()*m_characterWidth + 10,m_characterHeight));
+                    window.draw(m_selectbgRect);
+                }
                 it++;
             }
-            m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+m_selectBig.y*m_characterHeight + m_characterDecenderHeight);
-            m_selectbgRect.setSize(sf::Vector2f((m_selectBig.x)*m_characterWidth,m_characterHeight));
-            window.draw(m_selectbgRect);
+            if(m_selectBig.y >= m_renderStartLine && m_selectBig.y < m_renderStartLine+m_renderedLines)
+            {
+                m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+m_selectBig.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
+                m_selectbgRect.setSize(sf::Vector2f((m_selectBig.x)*m_characterWidth,m_characterHeight));
+                window.draw(m_selectbgRect);
+            }
         }
     }
-
-    m_selectbgRect.setPosition(m_cursor.x*m_characterWidth,(m_cursor.y)*m_characterHeight+m_characterDecenderHeight);
-    m_selectbgRect.setSize(sf::Vector2f(2,m_characterHeight));
+    std::string lineNumber = std::to_string((int)m_Text.size()); 
+    int numberDigits = std::max((int)lineNumber.size(),3);
+    m_selectbgRect.setPosition(m_bounds.left+m_cursor.x*m_characterWidth+(numberDigits+1)*m_characterWidth,
+                               m_bounds.top+(m_cursor.y-m_renderStartLine)*m_characterHeight+m_characterDecenderHeight);
+    m_selectbgRect.setSize(sf::Vector2f(3,m_characterHeight));
     window.draw(m_selectbgRect);
 
     m_fontSprite.setColor(m_textColor);
-    int lineCounter = 0;
-    for(auto it : m_Text)
+    auto it = m_renderStartIterator;
+    for(int i = m_renderStartLine;i < std::min(m_renderStartLine+m_renderedLines,(int)m_Text.size());i++)
     {
-        for(int x = 0;x < it.size();x++)
+        std::string currentLineNumber = std::to_string(i+1);
+        for(int x = 0;x < currentLineNumber.size();x++)
         {
-            m_fontSprite.setTextureRect(m_charGlyphs[it[x]].textureRect);
-            m_fontSprite.setPosition(m_bounds.left + x * m_characterWidth + (m_characterWidth - m_charGlyphs[it[x]].bounds.width)/2,
-                                        m_bounds.top  + (lineCounter+1)*m_characterHeight + m_charGlyphs[it[x]].bounds.top);
+            m_fontSprite.setTextureRect(m_charGlyphs[currentLineNumber[currentLineNumber.size()-x-1]].textureRect);
+            m_fontSprite.setPosition(
+m_bounds.left+(numberDigits-x-1)*m_characterWidth+(m_characterWidth - m_charGlyphs[currentLineNumber[currentLineNumber.size()-x-1]].bounds.width)/2,
+m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[currentLineNumber[currentLineNumber.size()-x-1]].bounds.top - m_characterDecenderHeight
+            );
+            window.draw(m_fontSprite);
+        }
+        for(int x = 0;x < it->size();x++)
+        {
+            m_fontSprite.setTextureRect(m_charGlyphs[(*it)[x]].textureRect);
+            m_fontSprite.setPosition(m_bounds.left+x*m_characterWidth+(m_characterWidth - m_charGlyphs[(*it)[x]].bounds.width)/2+(numberDigits+1)*m_characterWidth,
+                                     m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[(*it)[x]].bounds.top - m_characterDecenderHeight);
             
-            if(m_selectBig.y < lineCounter || (m_selectBig.y == lineCounter && m_selectBig.x <= x))
+            if(m_selectBig.y < i || (m_selectBig.y == i && m_selectBig.x <= x))
                 m_fontSprite.setColor(m_textColor);
-            else if(m_selectLil.y < lineCounter || (m_selectLil.y == lineCounter && m_selectLil.x <= x))
+            else if(m_selectLil.y < i || (m_selectLil.y == i && m_selectLil.x <= x))
                 m_fontSprite.setColor(m_textColorInverted);
-
-            
             
             window.draw(m_fontSprite);
         }
-        lineCounter++;
+        it++;
     }
 }
 
 void TextEditor::CharWriter(char a)
 {
+    //CursorMover(sf::Vector2i(0,0),0);
+
     if(m_cursor.x > m_cursor.lineIt->size())
         m_cursor.x = m_cursor.lineIt->size();
     
@@ -364,11 +397,15 @@ void TextEditor::CharWriter(char a)
     }
     else if(a >= 32)
     {
+        if(m_cursor.lineIt->size() >= m_renderedChars-3)
+            return;
         m_cursor.lineIt->insert(m_cursor.x,1,a);
         CursorMover(sf::Vector2i(1,0),0);
         if(!m_historyReadOnly)
             m_History.back()->goBackStr.push_front(8);
     }
+
+    DeSelect(0);
 }
 int TextEditor::GetCharType(char a)
 {
@@ -449,6 +486,18 @@ void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
         m_selectBig = (m_selectEnd.x > m_selectStart.x) ? m_selectEnd : m_selectStart;
     }
     
+    if(m_cursor.y >= m_renderStartLine+m_renderedLines)
+    {
+        m_renderStartLine = m_cursor.y-m_renderedLines+1;
+        m_renderStartIterator = m_cursor.lineIt;
+        for(int i = 0;i < m_renderedLines-1;i++)
+            m_renderStartIterator--;
+    }
+    else if(m_cursor.y < m_renderStartLine)
+    {
+        m_renderStartLine = m_cursor.y;
+        m_renderStartIterator = m_cursor.lineIt;
+    }
 }
 void TextEditor::DeSelect(int i)
 {
@@ -462,6 +511,8 @@ void TextEditor::DeSelect(int i)
     m_selectStart = m_selectEnd;
     m_selectBig = m_selectStart;
     m_selectLil = m_selectBig;
+
+    CursorMover(sf::Vector2i(0,0),0);
 }
 void TextEditor::DeleteSelection()
 {
