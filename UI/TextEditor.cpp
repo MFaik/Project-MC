@@ -56,7 +56,8 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
 TextEditor::~TextEditor()
 {
 }
-
+//--------------------------------------------------------------------------------------------
+//Get Text
 std::string TextEditor::getText()
 {
     std::string ret = "";
@@ -71,7 +72,8 @@ std::list<std::string>& TextEditor::getTextList()
 {
     return m_Text;
 }
-
+//--------------------------------------------------------------------------------------------
+//Set Text
 void TextEditor::setText(const std::string&str)
 {
     m_Text.clear();
@@ -92,8 +94,9 @@ void TextEditor::setText(const std::string&str)
 void TextEditor::Update()
 {
 }
-
-void TextEditor::Update(const sf::Event &event)//not done
+//--------------------------------------------------------------------------------------------
+//Update
+void TextEditor::Update(const sf::Event &event)
 {
     if(event.type == sf::Event::TextEntered)
     {
@@ -146,12 +149,12 @@ void TextEditor::Update(const sf::Event &event)//not done
             
             if(!m_selecting)
             {
-                if(event.key.code == sf::Keyboard::Right && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectBig.y))
+                if(event.key.code == sf::Keyboard::Right && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectLil.y))
                 {
                     DeSelect(1);
                     return;
                 }
-                else if(event.key.code == sf::Keyboard::Left && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectBig.y))
+                else if(event.key.code == sf::Keyboard::Left && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectLil.y))
                 {
                     DeSelect(-1);
                     return;
@@ -210,8 +213,9 @@ void TextEditor::Update(const sf::Event &event)//not done
         }
     }
 }
-
-void TextEditor::Render(sf::RenderWindow &window)//not done
+//--------------------------------------------------------------------------------------------
+//Render
+void TextEditor::Render(sf::RenderWindow &window)
 {
     window.draw(m_bgRect);
     
@@ -290,10 +294,10 @@ m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[current
         it++;
     }
 }
-
+//--------------------------------------------------------------------------------------------
+//CharWriter
 void TextEditor::CharWriter(char a)
 {
-    //CursorMover(sf::Vector2i(0,0),0);
 
     if(m_cursor.x > m_cursor.lineIt->size())
         m_cursor.x = m_cursor.lineIt->size();
@@ -305,8 +309,8 @@ void TextEditor::CharWriter(char a)
             return;
     }
     DeSelect(0);
-    
-    if(a == 8)//back space
+    //Back Space
+    if(a == 8)
     {
         bool onlySpaces = m_cursor.x > 0;
         int spaces = 0;
@@ -348,7 +352,8 @@ void TextEditor::CharWriter(char a)
             }
         }
     }
-    else if(a == 7)//delete
+    //Delete
+    else if(a == 7)
     {
         if(m_cursor.x < m_cursor.lineIt->size())
         {
@@ -367,7 +372,8 @@ void TextEditor::CharWriter(char a)
             m_Text.erase(tmp);
         }
     }
-    else if(a == 13)//\n
+    //New Line
+    else if(a == 13)
     {
         if(!m_historyReadOnly)
             m_History.back()->goBackStr.push_front(8);
@@ -377,6 +383,7 @@ void TextEditor::CharWriter(char a)
         *m_cursor.lineIt = m_cursor.lineIt->substr(0,m_cursor.x);
         CursorMover(sf::Vector2i{0,1},-1);
     }
+    //Ctrl + BackSpace
     else if(a == 127)
     {
         if(m_cursor.x <= 0)
@@ -390,11 +397,13 @@ void TextEditor::CharWriter(char a)
             }
         }
     }
-    else if(a == 9)//tab
+    //Tab
+    else if(a == 9)
     {
         for(int i = 0;i < 4;i++)
             CharWriter(' ');
     }
+    //Written Chars
     else if(a >= 32)
     {
         if(m_cursor.lineIt->size() >= m_renderedChars-3)
@@ -407,6 +416,8 @@ void TextEditor::CharWriter(char a)
 
     DeSelect(0);
 }
+//--------------------------------------------------------------------------------------------
+//GetCharType
 int TextEditor::GetCharType(char a)
 {
     if(isalpha(a))
@@ -420,6 +431,8 @@ int TextEditor::GetCharType(char a)
     else
         return 5;
 }
+//--------------------------------------------------------------------------------------------
+//CursorMover
 void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
 {
     if(moveWay.x == 1)
@@ -499,6 +512,8 @@ void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
         m_renderStartIterator = m_cursor.lineIt;
     }
 }
+//--------------------------------------------------------------------------------------------
+//Selection
 void TextEditor::DeSelect(int i)
 {
     if(m_selectBig.x == m_selectLil.x && m_selectLil.y == m_selectBig.y)
@@ -514,6 +529,7 @@ void TextEditor::DeSelect(int i)
 
     CursorMover(sf::Vector2i(0,0),0);
 }
+
 void TextEditor::DeleteSelection()
 {
     PushHistory();
@@ -572,6 +588,8 @@ void TextEditor::PasteSelection()
         CharWriter(i);
 
 }
+//--------------------------------------------------------------------------------------------
+//Push History
 void TextEditor::PushHistory()
 {
     if(m_History.size() > 0)
