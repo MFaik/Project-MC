@@ -23,16 +23,16 @@ private:
     int m_characterHeight,m_characterWidth,m_characterDecenderHeight;
     sf::Color m_textColor,m_textColorInverted;
 
-    int m_renderStartLine,m_renderedLines,m_renderedChars;
+    int m_renderStartLine = 0,m_renderedLines,m_renderedChars,m_renderStartPos = 0;
     std::list<std::string>::iterator m_renderStartIterator;
 
     Cursor m_cursor,m_selectStart,m_selectEnd,m_selectLil,m_selectBig;
-    bool m_selecting;
+    bool m_selecting = false;
 
     bool m_historyReadOnly = false;
     std::deque<HistoryPart*> m_History;
     int m_maxHistoryLimit;
-    int m_lastCharType;
+    int m_lastCharType = 0;
 
     sf::Texture m_fontTexture;
     sf::Sprite m_fontSprite;
@@ -51,7 +51,7 @@ private:
     void PushHistory();
     //bool IsCursorInside(Cursor &mainCursor,Cursor &strCursor,Cursor &endCursor);
 public:
-    TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize);
+    TextEditor(const sf::Rect<float> bounds,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize);
     ~TextEditor();
     std::string getText();
     std::list<std::string>& getTextList();

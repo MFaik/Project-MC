@@ -16,15 +16,16 @@ private:
 
     sf::RectangleShape m_bgRect;
 
-    TextEditor *textEditor;
+    TextEditor *m_textEditor;
 
-    bool isTextEditor;
+    bool m_isTextEditor;
+    std::string m_currentFile;
 
     void PushCommandHistory(std::string str);
     void RunCommand();
     void CompleteCommand(std::string& str);
 public:
-    CLI(const sf::Rect<float> &bounds, std::string commandHistory,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize);
+    CLI(const sf::Rect<float> bounds, std::string commandHistory,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize);
     ~CLI();
     void Update() override;
     void Update(const sf::Event &event) override;

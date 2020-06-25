@@ -2,7 +2,9 @@
 
 #include <SFML/Graphics.hpp>
 
-ObjectHandler Handler;
+ObjectHandler g_Handler;
+std::string g_CurrentSaveFile = "0w0";
+
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(800,600),"Text Editor >:(");
@@ -14,14 +16,14 @@ int main()
         {
             if(event.type == sf::Event::Closed)
                 window.close();
-            Handler.Update(event);
+            g_Handler.Update(event);
         }
 
-        Handler.Update();
+        g_Handler.Update();
         
         window.clear(sf::Color::Black);
 
-        Handler.Render(window);
+        g_Handler.Render(window);
 
         window.display();
     }
