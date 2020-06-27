@@ -4,6 +4,8 @@
 
 #include <SFML/Graphics.hpp>
 
+#include <dirent.h> 
+
 class CLI : public Object
 {
 private:
@@ -13,6 +15,12 @@ private:
     sf::Font m_font;
 
     std::string m_commandStr;
+
+    int m_desiredLineCount;
+
+    bool m_isListing;
+    DIR *m_dr;
+    struct dirent *m_de;
 
     sf::RectangleShape m_bgRect;
 

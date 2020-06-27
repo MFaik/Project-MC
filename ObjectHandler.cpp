@@ -99,33 +99,29 @@ int ObjectHandler::AddObject(Object *const object, bool isUI)
     
 }
 
-Object* ObjectHandler::GetObject(int id, bool isUI)
+Object* ObjectHandler::GetGameObject(int id)
 {
-    if(isUI)
-    {
-        if(UIObjects.find(id) != UIObjects.end())
-            return UIObjects[UICount];
-    }
-    else
-    {
-        if(GameObjects.find(id) != GameObjects.end())
-            return GameObjects[UICount];
-    }
+    if(GameObjects.find(id) != GameObjects.end())
+        return GameObjects[UICount];
+    return nullptr;
+
+}
+Object* ObjectHandler::GetUIObject(int id)
+{
+    if(UIObjects.find(id) != UIObjects.end())
+        return UIObjects[UICount];
     return nullptr;
 }
 
-void ObjectHandler::DeleteObject(int id, bool isUI)
+void ObjectHandler::DeleteGameObject(int id)
 {
-    if(isUI)
-    {
-        if(UIObjects.find(id) != UIObjects.end())
-            delete UIObjects[UICount];
-        UIObjects.erase(id);
-    }
-    else
-    {
-        if(GameObjects.find(id) != GameObjects.end())
-            delete GameObjects[UICount];
-        GameObjects.erase(id);
-    }
+    if(GameObjects.find(id) != GameObjects.end())
+        delete GameObjects[UICount];
+    GameObjects.erase(id);
+}
+void ObjectHandler::DeleteUIObject(int id)
+{
+    if(UIObjects.find(id) != UIObjects.end())
+        delete UIObjects[UICount];
+    UIObjects.erase(id);
 }

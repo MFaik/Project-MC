@@ -5,6 +5,7 @@
 #include <string>
 #include <direct.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 extern std::string g_CurrentSaveFile;
 
@@ -24,16 +25,16 @@ CLI::CLI(const sf::Rect<float> bounds, std::string commandHistory,sf::Color bgCo
     m_commandHistoryText.setString("");
 
     int lineCount = std::count(m_commandHistoryStr.begin(), m_commandHistoryStr.end(), '\n');
-    int desiredLineCount = m_bounds.height/characterSize - 2;
-    if(lineCount < desiredLineCount)
+    m_desiredLineCount = m_bounds.height/characterSize - 2;
+    if(lineCount < m_desiredLineCount)
     {
-        int padLineCount =  desiredLineCount - lineCount;
+        int padLineCount =  m_desiredLineCount - lineCount;
         m_commandHistoryStr.insert(0,padLineCount,'\n');
     }
-    else if(lineCount > desiredLineCount)
+    else if(lineCount > m_desiredLineCount)
     {
         int deletedLineCount = 0;
-        for(int i = 0;deletedLineCount < lineCount-desiredLineCount;i++)
+        for(int i = 0;deletedLineCount < lineCount-m_desiredLineCount;i++)
         {
             if(m_commandHistoryStr[i] == '\n')
             {
@@ -87,7 +88,41 @@ void CLI::Update(const sf::Event &event)
             }
         }
     }
-    else 
+    else if(m_isListing)
+    {
+        if(event.type == sf::Event::TextEntered)
+        {
+            if(event.text.unicode == 13)//enter
+            {
+                PushCommandHistory("             Enter to continue listing     Q to stop listing");
+                m_commandText.setString(">");
+                m_isListing = false;
+                int i = 0;
+                while (true)
+                {
+                    if((m_de = readdir(m_dr)) == NULL)
+                    {
+                        closedir(m_dr);
+                        break;
+                    }
+                    else if(++i > m_desiredLineCount)
+                    {
+                        m_isListing = true;
+                        m_commandText.setString("             Enter to continue listing     Q to stop listing");
+                        break;
+                    }
+                    PushCommandHistory(m_de->d_name);
+                } 
+            }
+            else if(event.text.unicode == 'q')
+            {
+                PushCommandHistory("             Enter to continue listing     Q to stop listing");
+                m_commandText.setString(">");
+                m_isListing = false;
+            }
+        }
+    }
+    else
     {
         if(event.type == sf::Event::TextEntered)
         {
@@ -95,10 +130,12 @@ void CLI::Update(const sf::Event &event)
             {
                 if(m_commandStr.size() > 0)
                     RunCommand();
+                else
+                    PushCommandHistory("");
             }
             else if(event.text.unicode == 9)//Tab
             {
-                
+                //I wont make auto correct cause I am lazy
             }
             else if(event.text.unicode == 8)//Back Space
             {
@@ -109,7 +146,7 @@ void CLI::Update(const sf::Event &event)
             {
                 m_commandStr += tolower(event.text.unicode);
             }
-            if(!m_isTextEditor)
+            if(!m_isTextEditor && !m_isListing)
                 m_commandText.setString(">" + m_commandStr);
         }
     }
@@ -181,11 +218,47 @@ void CLI::RunCommand()
     }
     else if(firstArg == "list")
     {
-        PushCommandHistory("will get you the list of the codes in the future");
+
+        m_dr = opendir(("./Assets/Saves/" + g_CurrentSaveFile + "/codes").c_str()); 
+    
+        if (m_dr == NULL) 
+        {
+            PushCommandHistory(""); 
+            return; 
+        } 
+        (m_de = readdir(m_dr));(m_de = readdir(m_dr));
+        int i = 0;
+        while (true)
+        {
+            if((m_de = readdir(m_dr)) == NULL)
+            {
+                std::cout << "file ended" << '\n';
+                closedir(m_dr);
+                break;
+            }
+            else if(++i > m_desiredLineCount)
+            {
+                std::cout << "too many args -> " << m_desiredLineCount << '\n';
+                m_isListing = true;
+                m_commandText.setString("             Enter to continue listing     Q to stop listing");
+                break;
+            }
+            std::cout << m_de->d_name << '\n';
+            PushCommandHistory(m_de->d_name);
+        }    
     }
     else if(firstArg == "stop")
     {
         PushCommandHistory("will stop in the future");
+    }
+    else if(firstArg == "run")
+    {
+        if(secondArg.size() <= 0)
+        {
+            PushCommandHistory("File name cannot be empty");
+            return;
+        }
+        PushCommandHistory("will run " + secondArg + " in the future");
     }
     else if(firstArg == "create")
     {
@@ -194,9 +267,9 @@ void CLI::RunCommand()
             PushCommandHistory("File name cannot be empty");
             return;
         }
-        std::string name("Assets/Saves/" + g_CurrentSaveFile + "/codes/" + secondArg);
-        struct stat buffer;   
-        if(stat (name.c_str(), &buffer) == 0)//check if file exists
+        
+        std::ifstream ifs("Assets/Saves/" + g_CurrentSaveFile + "/codes/" + secondArg);
+        if(ifs.is_open())//check if file exists
         {
             PushCommandHistory(secondArg + ": File already exist");
             return;
@@ -205,10 +278,20 @@ void CLI::RunCommand()
         {
             m_textEditor->setText("");
         }
-        
+        ifs.close();
+        //stupid file things
+        #ifdef SFML_SYSTEM_WINDOWS
         mkdir("Assets/Saves");
         mkdir(("Assets/Saves/" + g_CurrentSaveFile).c_str());
         mkdir(("Assets/Saves/" + g_CurrentSaveFile + "/codes").c_str());
+        #else
+        mode_t nMode = 0733;
+        mkdir("Assets/Saves",nMode);
+        mkdir(("Assets/Saves/" + g_CurrentSaveFile).c_str(),nMode);
+        mkdir(("Assets/Saves/" + g_CurrentSaveFile + "/codes").c_str(),nMode);
+        #endif
+        //stupid file things ended
+
         std::ofstream ofs("Assets/Saves/" + g_CurrentSaveFile + "/codes/" + secondArg,std::ios::out | std::ios::trunc);
         ofs.close();
 
@@ -243,15 +326,6 @@ void CLI::RunCommand()
             PushCommandHistory(secondArg + ": File doesn't exist");
         else
             PushCommandHistory(secondArg + ": File seccessfully deleted");
-    }
-    else if(firstArg == "run")
-    {
-        if(secondArg.size() <= 0)
-        {
-            PushCommandHistory("File name cannot be empty");
-            return;
-        }
-        PushCommandHistory("will run " + secondArg + " in the future");
     }
     else
     {
