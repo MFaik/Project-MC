@@ -17,6 +17,8 @@ public:
     void Update(const sf::Event &event);
     void Render(sf::RenderWindow &window);
     int AddObject(Object *const object, bool isUI);
-    Object* GetObject(int id, bool isUI);
-    void DeleteObject(int id, bool isUI);
+    Object* GetGameObject(int id);
+    Object* GetUIObject(int id);
+    void DeleteGameObject(int id);
+    void DeleteUIObject(int id);
 };

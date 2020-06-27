@@ -6,10 +6,10 @@ externallib = -lopengl32 -lwinmm -lgdi32 -lfreetype -lopenal32 -lflac -lvorbisen
 
 
 all:
-	g++ *.cpp -O3 -s -oGame -DSFML_STATIC -I${sfmlincludedir}  -L${sfmllibdir} $(sfmllib) ${externallib}
+	g++ UI/*.cpp *.cpp -O3 -s -oGame -DSFML_STATIC -I${sfmlincludedir}  -L${sfmllibdir} $(sfmllib) ${externallib}
 
 debug:
-	g++ *.cpp -O1 -g -oGame -DSFML_STATIC -I ${sfmlincludedir} -L ${sfmllibdir} $(sfmllibd) ${externallib}
+	g++ UI/*.cpp *.cpp -O1 -g -v -Wall -oGame -DSFML_STATIC -I ${sfmlincludedir} -L ${sfmllibdir} $(sfmllibd) ${externallib}
 
 clean:
 	del /s *.exe

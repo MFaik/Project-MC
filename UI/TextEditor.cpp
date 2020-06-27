@@ -6,7 +6,7 @@
 #include <string>
 #include <iostream>
 
-TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize)
+TextEditor::TextEditor(const sf::Rect<float> bounds,sf::Color bgColor,sf::Color textColor,sf::Font font,int characterSize)
  : Object(bounds) , m_characterHeight(characterSize) , m_textColor(textColor)
 {
     m_Text.push_back("");
@@ -20,12 +20,11 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
 
     m_maxHistoryLimit = 50;
 
-
-
     PushHistory();
 
     m_characterWidth = 0;
     m_characterDecenderHeight = 0;
+
     for(int i = 32;i < 128;i++)
     {
         m_charGlyphs[i] = font.getGlyph((char)i,m_characterHeight,false);
@@ -40,9 +39,10 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
     m_renderedLines = bounds.height/m_characterHeight;
     m_renderStartIterator = m_Text.begin();
 
-    m_fontSprite.setColor(textColor);
-    m_fontTexture = font.getTexture(m_characterHeight);
+    m_fontTexture.create(256,256);
+    m_fontTexture.update(font.getTexture(m_characterHeight));
     m_fontSprite.setTexture(m_fontTexture);
+    m_fontSprite.setColor(textColor);
     
     m_textColorInverted = sf::Color(255-textColor.r,255-textColor.g,255-textColor.b);
 
@@ -51,12 +51,14 @@ TextEditor::TextEditor(const sf::Rect<float> &bounds,sf::Color bgColor,sf::Color
     m_bgRect.setPosition(bounds.left,bounds.top);
 
     m_selectbgRect.setFillColor(sf::Color(255-bgColor.r,255-bgColor.g,255-bgColor.b));
+    
 }
 
 TextEditor::~TextEditor()
 {
 }
-
+//--------------------------------------------------------------------------------------------
+//Get Text
 std::string TextEditor::getText()
 {
     std::string ret = "";
@@ -71,29 +73,50 @@ std::list<std::string>& TextEditor::getTextList()
 {
     return m_Text;
 }
-
-void TextEditor::setText(const std::string&str)
+//--------------------------------------------------------------------------------------------
+//Set Text
+void TextEditor::setText(const std::string &str)
 {
-    m_Text.clear();
-    m_Text.push_back("");
-    auto it = m_Text.begin();
-    for(char i : str)
+    if(m_Text.size() > 0)
     {
-        if(i != '\n')
-        {
-           *it += i;
-        }else
-        {
-           m_Text.push_back("");
-           it++;
-        }
+        m_Text.clear();
     }
+
+    for(int i = 0;i < m_History.size();i++)
+    {
+        delete m_History[i];
+    }
+    m_History.clear();
+    PushHistory();
+
+    int endit = 0,startit = 0;
+    while(endit < str.size())
+    {
+        while(str[endit] != '\n' && endit < str.size())
+        {
+            endit++;
+        }
+        m_Text.push_back(str.substr(startit,endit-startit));
+        startit = ++endit;
+    }
+
+    if(m_Text.size() <= 0)
+        m_Text.push_back("");
+    m_cursor.lineIt = m_Text.begin();
+    m_cursor.x = 0;
+    m_cursor.y = 0;
+    m_selectEnd = m_cursor;
+    m_selectStart = m_cursor;
+    m_selectLil = m_cursor;
+    m_selectBig = m_cursor;
+    m_renderStartIterator = m_cursor.lineIt;
 }
 void TextEditor::Update()
 {
 }
-
-void TextEditor::Update(const sf::Event &event)//not done
+//--------------------------------------------------------------------------------------------
+//Update
+void TextEditor::Update(const sf::Event &event)
 {
     if(event.type == sf::Event::TextEntered)
     {
@@ -146,12 +169,12 @@ void TextEditor::Update(const sf::Event &event)//not done
             
             if(!m_selecting)
             {
-                if(event.key.code == sf::Keyboard::Right && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectBig.y))
+                if(event.key.code == sf::Keyboard::Right && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectLil.y))
                 {
                     DeSelect(1);
                     return;
                 }
-                else if(event.key.code == sf::Keyboard::Left && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectBig.y))
+                else if(event.key.code == sf::Keyboard::Left && (m_selectBig.x != m_selectLil.x || m_selectBig.y != m_selectLil.y))
                 {
                     DeSelect(-1);
                     return;
@@ -210,16 +233,21 @@ void TextEditor::Update(const sf::Event &event)//not done
         }
     }
 }
-
-void TextEditor::Render(sf::RenderWindow &window)//not done
+//--------------------------------------------------------------------------------------------
+//Render
+void TextEditor::Render(sf::RenderWindow &window)
 {
     window.draw(m_bgRect);
-    
+
+    std::string lineNumber = std::to_string((int)m_Text.size()); 
+    int numberDigits = std::max((int)lineNumber.size(),3);
+
+    //draw the selection rect
     if(m_selectLil.x != m_selectBig.x || m_selectLil.y != m_selectBig.y)
     {
         if(m_selectLil.y == m_selectBig.y)
         {
-            m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,
+            m_selectbgRect.setPosition(m_bounds.left+(m_selectLil.x+numberDigits+1)*m_characterWidth,
                                        m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
             m_selectbgRect.setSize(sf::Vector2f((m_selectBig.x-m_selectLil.x)*m_characterWidth,m_characterHeight));
             window.draw(m_selectbgRect);
@@ -228,7 +256,7 @@ void TextEditor::Render(sf::RenderWindow &window)//not done
         {
             if(m_selectLil.y >= m_renderStartLine && m_selectLil.y < m_renderStartLine+m_renderedLines)
             {
-                m_selectbgRect.setPosition(m_bounds.left+m_selectLil.x*m_characterWidth,
+                m_selectbgRect.setPosition(m_bounds.left+(m_selectLil.x+numberDigits+1)*m_characterWidth,
                                            m_bounds.top+m_selectLil.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
                 m_selectbgRect.setSize(sf::Vector2f((m_selectLil.lineIt->size()-m_selectLil.x)*m_characterWidth + 10,m_characterHeight));
                 window.draw(m_selectbgRect);
@@ -239,7 +267,8 @@ void TextEditor::Render(sf::RenderWindow &window)//not done
             {
                 if(y >= m_renderStartLine && y < m_renderStartLine+m_renderedLines)
                 {
-                    m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
+                    m_selectbgRect.setPosition(m_bounds.left+(numberDigits+1)*m_characterWidth,
+                                               m_bounds.top+y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
                     m_selectbgRect.setSize(sf::Vector2f(it->size()*m_characterWidth + 10,m_characterHeight));
                     window.draw(m_selectbgRect);
                 }
@@ -247,15 +276,16 @@ void TextEditor::Render(sf::RenderWindow &window)//not done
             }
             if(m_selectBig.y >= m_renderStartLine && m_selectBig.y < m_renderStartLine+m_renderedLines)
             {
-                m_selectbgRect.setPosition(m_bounds.left,m_bounds.top+m_selectBig.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
+                m_selectbgRect.setPosition(m_bounds.left + (numberDigits+1)*m_characterWidth,
+                                           m_bounds.top+m_selectBig.y*m_characterHeight + m_characterDecenderHeight - m_renderStartLine*m_characterHeight);
                 m_selectbgRect.setSize(sf::Vector2f((m_selectBig.x)*m_characterWidth,m_characterHeight));
                 window.draw(m_selectbgRect);
             }
         }
     }
-    std::string lineNumber = std::to_string((int)m_Text.size()); 
-    int numberDigits = std::max((int)lineNumber.size(),3);
-    m_selectbgRect.setPosition(m_bounds.left+m_cursor.x*m_characterWidth+(numberDigits+1)*m_characterWidth,
+
+    //draw the cursor
+    m_selectbgRect.setPosition(m_bounds.left+(m_cursor.x-m_renderStartPos)*m_characterWidth+(numberDigits+1)*m_characterWidth,
                                m_bounds.top+(m_cursor.y-m_renderStartLine)*m_characterHeight+m_characterDecenderHeight);
     m_selectbgRect.setSize(sf::Vector2f(3,m_characterHeight));
     window.draw(m_selectbgRect);
@@ -264,6 +294,7 @@ void TextEditor::Render(sf::RenderWindow &window)//not done
     auto it = m_renderStartIterator;
     for(int i = m_renderStartLine;i < std::min(m_renderStartLine+m_renderedLines,(int)m_Text.size());i++)
     {
+        //draw the line numbers
         std::string currentLineNumber = std::to_string(i+1);
         for(int x = 0;x < currentLineNumber.size();x++)
         {
@@ -274,11 +305,16 @@ m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[current
             );
             window.draw(m_fontSprite);
         }
-        for(int x = 0;x < it->size();x++)
+    }
+    for(int i = m_renderStartLine;i < std::min(m_renderStartLine+m_renderedLines,(int)m_Text.size());i++)
+    {
+        //draw the text
+        for(int x = m_renderStartPos;x < std::min((int)it->size(),m_renderStartPos+m_renderedChars-3);x++)
         {
             m_fontSprite.setTextureRect(m_charGlyphs[(*it)[x]].textureRect);
-            m_fontSprite.setPosition(m_bounds.left+x*m_characterWidth+(m_characterWidth - m_charGlyphs[(*it)[x]].bounds.width)/2+(numberDigits+1)*m_characterWidth,
-                                     m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[(*it)[x]].bounds.top - m_characterDecenderHeight);
+            m_fontSprite.setPosition(
+                m_bounds.left+(x-m_renderStartPos)*m_characterWidth+(m_characterWidth - m_charGlyphs[(*it)[x]].bounds.width)/2+(numberDigits+1)*m_characterWidth,
+                m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[(*it)[x]].bounds.top - m_characterDecenderHeight);
             
             if(m_selectBig.y < i || (m_selectBig.y == i && m_selectBig.x <= x))
                 m_fontSprite.setColor(m_textColor);
@@ -290,10 +326,10 @@ m_bounds.top  + (i-m_renderStartLine+1)*m_characterHeight + m_charGlyphs[current
         it++;
     }
 }
-
+//--------------------------------------------------------------------------------------------
+//CharWriter
 void TextEditor::CharWriter(char a)
 {
-    //CursorMover(sf::Vector2i(0,0),0);
 
     if(m_cursor.x > m_cursor.lineIt->size())
         m_cursor.x = m_cursor.lineIt->size();
@@ -305,8 +341,8 @@ void TextEditor::CharWriter(char a)
             return;
     }
     DeSelect(0);
-    
-    if(a == 8)//back space
+    //Back Space
+    if(a == 8)
     {
         bool onlySpaces = m_cursor.x > 0;
         int spaces = 0;
@@ -326,7 +362,8 @@ void TextEditor::CharWriter(char a)
             {
                 if(!m_historyReadOnly)
                     m_History.back()->goBackStr.push_front((*m_cursor.lineIt)[m_cursor.x-1]);
-                m_cursor.lineIt->erase(--m_cursor.x,1);
+                m_cursor.lineIt->erase(m_cursor.x-1,1);
+                CursorMover(sf::Vector2i(-1,0),0);
             }
             else if(m_cursor.y > 0)
             {
@@ -348,7 +385,8 @@ void TextEditor::CharWriter(char a)
             }
         }
     }
-    else if(a == 7)//delete
+    //Delete
+    else if(a == 7)
     {
         if(m_cursor.x < m_cursor.lineIt->size())
         {
@@ -367,7 +405,8 @@ void TextEditor::CharWriter(char a)
             m_Text.erase(tmp);
         }
     }
-    else if(a == 13)//\n
+    //New Line
+    else if(a == 13 || a == '\n')
     {
         if(!m_historyReadOnly)
             m_History.back()->goBackStr.push_front(8);
@@ -377,6 +416,7 @@ void TextEditor::CharWriter(char a)
         *m_cursor.lineIt = m_cursor.lineIt->substr(0,m_cursor.x);
         CursorMover(sf::Vector2i{0,1},-1);
     }
+    //Ctrl + BackSpace
     else if(a == 127)
     {
         if(m_cursor.x <= 0)
@@ -390,15 +430,17 @@ void TextEditor::CharWriter(char a)
             }
         }
     }
-    else if(a == 9)//tab
+    //Tab
+    else if(a == 9)
     {
         for(int i = 0;i < 4;i++)
             CharWriter(' ');
     }
+    //Written Chars
     else if(a >= 32)
     {
         if(m_cursor.lineIt->size() >= m_renderedChars-3)
-            return;
+            ;//return;
         m_cursor.lineIt->insert(m_cursor.x,1,a);
         CursorMover(sf::Vector2i(1,0),0);
         if(!m_historyReadOnly)
@@ -407,6 +449,8 @@ void TextEditor::CharWriter(char a)
 
     DeSelect(0);
 }
+//--------------------------------------------------------------------------------------------
+//GetCharType
 int TextEditor::GetCharType(char a)
 {
     if(isalpha(a))
@@ -420,6 +464,8 @@ int TextEditor::GetCharType(char a)
     else
         return 5;
 }
+//--------------------------------------------------------------------------------------------
+//CursorMover
 void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
 {
     if(moveWay.x == 1)
@@ -460,14 +506,14 @@ void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
         else
             m_cursor.x = 0;
     }
-
+    //make sure selection pointers are inside bounds
     if(m_selectEnd.x > m_selectEnd.lineIt->size())
         m_selectEnd.x = m_selectEnd.lineIt->size();
     if(m_selectStart.x > m_selectStart.lineIt->size())
         m_selectStart.x = m_selectStart.lineIt->size();
     if(m_cursor.x > m_cursor.lineIt->size())
         m_cursor.x = m_cursor.lineIt->size();
-
+    //re calculate the big and the little select pointers
     if(m_selecting)
         m_selectEnd = m_cursor;
     if(m_selectEnd.y < m_selectStart.y)
@@ -485,7 +531,7 @@ void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
         m_selectLil = (m_selectEnd.x < m_selectStart.x) ? m_selectEnd : m_selectStart;
         m_selectBig = (m_selectEnd.x > m_selectStart.x) ? m_selectEnd : m_selectStart;
     }
-    
+    //relocate the render start line so we can see the cursor
     if(m_cursor.y >= m_renderStartLine+m_renderedLines)
     {
         m_renderStartLine = m_cursor.y-m_renderedLines+1;
@@ -498,7 +544,14 @@ void TextEditor::CursorMover(sf::Vector2i moveWay,int nextXPos)
         m_renderStartLine = m_cursor.y;
         m_renderStartIterator = m_cursor.lineIt;
     }
+    //relocate the render start pos so we can see the cursor
+    if(m_cursor.x > m_renderStartPos + m_renderedChars - 4)
+        m_renderStartPos = m_cursor.x - m_renderedChars + 4;
+    else if(m_cursor.x < m_renderStartPos)
+        m_renderStartPos = m_cursor.x;
 }
+//--------------------------------------------------------------------------------------------
+//Selection
 void TextEditor::DeSelect(int i)
 {
     if(m_selectBig.x == m_selectLil.x && m_selectLil.y == m_selectBig.y)
@@ -514,6 +567,7 @@ void TextEditor::DeSelect(int i)
 
     CursorMover(sf::Vector2i(0,0),0);
 }
+
 void TextEditor::DeleteSelection()
 {
     PushHistory();
@@ -569,9 +623,14 @@ void TextEditor::PasteSelection()
     PushHistory();
 
     for(char i : pasteString)
+    {
         CharWriter(i);
+        std::cout << "wrote this ->" << i << '\n';
+    }
 
 }
+//--------------------------------------------------------------------------------------------
+//Push History
 void TextEditor::PushHistory()
 {
     if(m_History.size() > 0)

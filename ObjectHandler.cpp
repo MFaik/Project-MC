@@ -1,13 +1,32 @@
 #include "ObjectHandler.hpp"
 
-#include "TextEditor.hpp"
-sf::Font codeFont;
+#include "UI/CLI.hpp"
+
+#include <iostream>
+
 ObjectHandler::ObjectHandler()
 {
-    
+    sf::Font codeFont;
     codeFont.loadFromFile("Assets/Fonts/basis33.ttf");
-    TextEditor *textEditor = new TextEditor(sf::Rect<float>{0,0,800,600},sf::Color::Black,sf::Color::Yellow,codeFont,24);
-    AddObject(textEditor,true);
+    CLI *cli = new CLI(sf::Rect<float>{0,0,800,600},
+" ######   #######  ##     ## #######   ######  ####### #######  ##    ##\n"
+"##    ## ##     ## ##     ## ##    ## ##    ## ##      ##    ##  ##  ## \n"
+"##       ##     ## ##     ## ##    ## ##       ##      ##    ##   ####  \n"
+" ######  ##     ## ##     ## #######  ##       #####   #######     ##   \n"
+"      ## ##     ## ##     ## ##   ##  ##       ##      ##   ##     ##   \n"
+"##    ## ##     ## ##     ## ##    ## ##    ## ##      ##    ##    ##   \n"
+" ######   #######   #######  ##     ## ######  ####### ##     ##   ##   \n"
+"                            #######   ######                            \n"
+"                           ##     ## ##    ##                           \n"
+"                           ##     ## ##                                 \n"
+" ######################### ##     ##  ######  ######################### \n"
+"                           ##     ##       ##                           \n"
+"                           ##     ## ##    ##                           \n"
+"                            #######   ######                            \n"
+"\n\n\n\n\n\n"                                                                       
+"Write help to get the list of commands"
+                       ,sf::Color::Black,sf::Color::Yellow,codeFont,24);
+    AddObject(cli,true);
 }
 
 ObjectHandler::~ObjectHandler()
@@ -68,41 +87,41 @@ int ObjectHandler::AddObject(Object *const object, bool isUI)
 {
     if(isUI)
     {
+        
         UIObjects[UICount++] = object;
+        return UICount-1;
     }
     else
     {
         GameObjects[GameObjectCount++] = object;
+        return GameObjectCount-1;
     }
     
 }
 
-Object* ObjectHandler::GetObject(int id, bool isUI)
+Object* ObjectHandler::GetGameObject(int id)
 {
-    if(isUI)
-    {
-        if(UIObjects.find(id) != UIObjects.end())
-            return UIObjects[UICount];
-    }
-    else
-    {
-        if(GameObjects.find(id) != GameObjects.end())
-            return GameObjects[UICount];
-    }
+    if(GameObjects.find(id) != GameObjects.end())
+        return GameObjects[UICount];
+    return nullptr;
+
+}
+Object* ObjectHandler::GetUIObject(int id)
+{
+    if(UIObjects.find(id) != UIObjects.end())
+        return UIObjects[UICount];
+    return nullptr;
 }
 
-void ObjectHandler::DeleteObject(int id, bool isUI)
+void ObjectHandler::DeleteGameObject(int id)
 {
-    if(isUI)
-    {
-        if(UIObjects.find(id) != UIObjects.end())
-            delete UIObjects[UICount];
-        UIObjects.erase(id);
-    }
-    else
-    {
-        if(GameObjects.find(id) != GameObjects.end())
-            delete GameObjects[UICount];
-        GameObjects.erase(id);
-    }
+    if(GameObjects.find(id) != GameObjects.end())
+        delete GameObjects[UICount];
+    GameObjects.erase(id);
+}
+void ObjectHandler::DeleteUIObject(int id)
+{
+    if(UIObjects.find(id) != UIObjects.end())
+        delete UIObjects[UICount];
+    UIObjects.erase(id);
 }
