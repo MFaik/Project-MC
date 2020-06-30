@@ -204,10 +204,7 @@ void CLI::RunCommand()
         PushCommandHistory("");
         PushCommandHistory("--------- here to help you ---------");
         PushCommandHistory("help        Displays this information");
-        PushCommandHistory("manual      Opens the coding manual (external pdf)");
         PushCommandHistory("list        Lists the code database");
-        PushCommandHistory("stop        Stops the running code");
-        PushCommandHistory("run    <fn> Runs the code inside <fn>");
         PushCommandHistory("create <fn> Creates a file named <fn>");
         PushCommandHistory("edit   <fn> Opens <fn> for editing");
         PushCommandHistory("delete <fn> Deletes <fn>");
@@ -246,19 +243,6 @@ void CLI::RunCommand()
             std::cout << m_de->d_name << '\n';
             PushCommandHistory(m_de->d_name);
         }    
-    }
-    else if(firstArg == "stop")
-    {
-        PushCommandHistory("will stop in the future");
-    }
-    else if(firstArg == "run")
-    {
-        if(secondArg.size() <= 0)
-        {
-            PushCommandHistory("File name cannot be empty");
-            return;
-        }
-        PushCommandHistory("will run " + secondArg + " in the future");
     }
     else if(firstArg == "create")
     {
